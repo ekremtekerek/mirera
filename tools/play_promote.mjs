@@ -88,14 +88,38 @@ const tok = await token(keyPath)
 const edit = await call(tok, 'POST', `${API}/applications/${PKG}/edits`)
 const E = `${API}/applications/${PKG}/edits/${edit.id}`
 
+//
+// HIC YAYINLANMAMIS uygulamada surum "draft" olmak ZORUNDA.
+//
+// Play, hic yayina cikmamis bir uygulamayi "taslak uygulama" sayiyor ve
+// uzerine tam yayilimli bir surum kabul etmiyor:
+//   "Only releases with status draft may be created on draft app."
+//
+// Taslak surum kanalda birikiyor, sonra Play Console'daki "Yayinlama
+// ozeti" sayfasindan incelemeye gonderiliyor. Uygulama bir kez yayina
+// ciktiktan sonra 'completed' calisiyor ve --taslak gerekmiyor.
+const durum = flag('taslak') ? 'draft' : 'completed'
+
+//
+// Surum notlari: dil basina 500 karakter siniri var. Ilk surumde bos
+// birakmak Play Console'da "0/13 dil icin surum notlari saglandi" diye
+// duruyor ve magazada "Yenilikler" bolumu bos cikiyor.
+const notlarYolu = arg('notlar')
+const notlar = notlarYolu
+  ? JSON.parse(await (await import('node:fs/promises')).readFile(notlarYolu, 'utf8'))
+  : null
+
 await call(tok, 'PUT', `${E}/tracks/${kanal}`, {
   track: kanal,
   releases: [{
     versionCodes: [String(surum)],
-    status: 'completed',
+    status: durum,
+    ...(notlar
+      ? { releaseNotes: Object.entries(notlar).map(([language, text]) => ({ language, text })) }
+      : {}),
   }],
 })
-console.log(`  surum ${surum} -> "${kanal}" kanalina yukseltildi`)
+console.log(`  surum ${surum} -> "${kanal}" kanalina yukseltildi (${durum})`)
 
 await call(tok, 'POST', `${E}:commit`)
 console.log('\n  UYGULANDI.\n')
