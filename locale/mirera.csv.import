@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://cwn2221nc00vi"
+
+[deps]
+
+files=["res://locale/mirera.en.translation", "res://locale/mirera.tr.translation", "res://locale/mirera.es.translation", "res://locale/mirera.pt.translation", "res://locale/mirera.de.translation", "res://locale/mirera.fr.translation", "res://locale/mirera.it.translation", "res://locale/mirera.ru.translation", "res://locale/mirera.pl.translation", "res://locale/mirera.nl.translation", "res://locale/mirera.id.translation", "res://locale/mirera.vi.translation", "res://locale/mirera.uk.translation"]
+
+source_file="res://locale/mirera.csv"
+dest_files=["res://locale/mirera.en.translation", "res://locale/mirera.tr.translation", "res://locale/mirera.es.translation", "res://locale/mirera.pt.translation", "res://locale/mirera.de.translation", "res://locale/mirera.fr.translation", "res://locale/mirera.it.translation", "res://locale/mirera.ru.translation", "res://locale/mirera.pl.translation", "res://locale/mirera.nl.translation", "res://locale/mirera.id.translation", "res://locale/mirera.vi.translation", "res://locale/mirera.uk.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true
