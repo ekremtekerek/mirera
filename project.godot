@@ -44,7 +44,3 @@ locale/translations=PackedStringArray("res://addons/admob/gdscript/sample/transl
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true
-
-[admob]
-
-general/android/app_id="ca-app-pub-3940256099942544~3347511713"

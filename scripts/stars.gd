@@ -1,24 +1,28 @@
 class_name Stars
 extends RefCounted
 ##
-## Yildiz kurali.
+## Yildiz kurali: DOKUNUS SAYISI.
 ##
-## Bu oyunda "daha az hamle" olcusu YOK: oyuncu tam olarak par kadar tohum
-## seciyor, ya tutuyor ya tutmuyor. O yuzden olcu DENEME SAYISI:
+##   par kadar dokunus      -> 3 yildiz
+##   par + 1 veya par + 2   -> 2 yildiz
+##   daha fazlasi           -> 1 yildiz
 ##
-##   1. denemede  -> 3 yildiz
-##   2-3. deneme  -> 2 yildiz
-##   sonrasi      -> 1 yildiz
+## Olcu par'a GORE, mutlak sayiya gore degil: 2 dokunusluk bir bolumde 4
+## dokunus savruk, 6 dokunusluk bir bolumde ise iyi bir sonuc. Sabit esik
+## koymak zorlasan bolumleri haksiz sekilde cezalandirirdi.
 ##
-## Boylece oyun "once dusun, sonra bas" davranisini oduluyor -- ki bu zaten
-## mekanigin ruhu: kurulum sessiz, calistirma geri alinamaz.
+## "Deneme sayisi" olcusu bu oyunda ANLAMSIZ: geri alinamaz bir "calistir"
+## hamlesi yok, oyuncu istedigi kadar ayna cevirebiliyor ve isin her
+## dokunusta aninda yeniden ciziliyor. Olculebilir tek sey ne kadar TEMIZ
+## cozdugu.
 ##
-## Tabani 1'de tuttum. Sifir yildiz vermek cocuk oyuncuda "basaramadim"
-## hissi birakiyor; oysa seviye COZULDU. En dusuk odul de bir odul.
+## Taban 1'de duruyor. Sifir yildiz vermek "basaramadim" hissi birakiyor,
+## oysa bolum COZULDU; en dusuk odul de bir odul. Ustelik yildiz tema
+## acilislarini besliyor, yani sifir vermek ilerlemeyi de durdururdu.
 
-static func rate(attempts: int) -> int:
-	if attempts <= 1:
+static func rate(taps: int, par: int) -> int:
+	if taps <= par:
 		return 3
-	if attempts <= 3:
+	if taps <= par + 2:
 		return 2
 	return 1

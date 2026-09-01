@@ -13,6 +13,13 @@ func is_interstitial_ready() -> bool: return true
 func is_rewarded_ready() -> bool: return true
 
 
+func initialize(consent_mode: String) -> void:
+	super.initialize(consent_mode)
+	# Asama etiketi burada da dogru olmali: masaustunde "hazir" gormek,
+	# etiketin gercekten guncellendigini kanitliyor.
+	asama = "hazir"
+
+
 func show_interstitial() -> bool:
 	await _bekle(1.0)
 	return true

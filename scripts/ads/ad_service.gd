@@ -62,6 +62,41 @@ func rewarded_ready() -> bool:
 	return provider != null and provider.is_rewarded_ready()
 
 
+## Baslatma zincirinin hangi asamada oldugu. Oyuncuya gosterilen "reklam
+## yok" mesajinin sonuna ekleniyor; tek kelime, dort ayri arizayi ayirt
+## ediyor ve uzaktan teshisi mumkun kiliyor.
+func asama() -> String:
+	return provider.asama if provider != null else "yok"
+
+
+##
+## Odullu reklam SUNULABILIR mi -- su anda yuklu olup olmamasindan bagimsiz.
+##
+## Ipucu dugmesi once `rewarded_ready()` soruyordu ve reklam o an yuklu
+## degilse dugmeyi HIC gostermiyordu. Oyuncunun gordugu sey, tikandigi
+## seviyede hicbir cikis yolu olmayan bir ekran oldu -- oyun bozuk
+## gorunuyor. Oysa yeni bir uygulamada doluluk gecikmesi normal.
+##
+## Artik dugme her zaman gorunuyor; hazir degilse KISA BIR SURE bekleniyor
+## ve olmazsa oyuncuya durum soyleniyor. Sessizlik en kotu cevap.
+func rewarded_possible() -> bool:
+	return provider != null and not using_stub() and not Save.ads_removed
+
+
+## Reklam hazir olana kadar bekler. Yukleme dongusu zaten arka planda
+## `RELOAD_DELAY` araliklariyla donuyor; burada yalnizca onu bekliyoruz.
+func await_rewarded(timeout: float = 8.0) -> bool:
+	if provider == null:
+		return false
+	var gecen := 0.0
+	while gecen < timeout:
+		if provider.is_rewarded_ready():
+			return true
+		await get_tree().create_timer(0.25).timeout
+		gecen += 0.25
+	return false
+
+
 func show_rewarded(placement: String) -> bool:
 	if busy or provider == null or not provider.is_rewarded_ready():
 		return false
