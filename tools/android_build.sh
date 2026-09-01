@@ -31,7 +31,7 @@ fi
 # Yayin imzasi: parola README'den, tek satirlik alan olarak okunuyor.
 README="$KEYS/mirera-upload.README.txt"
 [ -f "$README" ] || { echo "HATA: $README yok -- anahtar kurulmamis"; exit 1; }
-PW="$(sed -n 's/^  parola   : //p' "$README" | head -1)"
+PW="$(sed -n 's/^ *parola *: *//p' "$README" | head -1)"
 [ -n "$PW" ] || { echo "HATA: parola README'den okunamadi"; exit 1; }
 
 export GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$KEYS/mirera-upload.keystore"

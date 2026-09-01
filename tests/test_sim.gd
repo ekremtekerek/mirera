@@ -28,6 +28,7 @@ func _initialize() -> void:
 	t_locale()
 	t_ad_policy()
 	t_store_gate()
+	t_urun_karsiligi()
 	t_export_safety()
 	t_kurulum()
 	print("\n%d kontrol, %d hata" % [checks, failed])
@@ -522,3 +523,25 @@ func _kodu_oku(yol: String) -> String:
 			continue
 		out += satir + "\n"
 	return out
+
+
+##
+## SATILAN HER URUNUN BIR KARSILIGI OLMALI.
+##
+## Mirera, Fusera'nin magaza katmanini oldugu gibi devraldi ve icinde
+## `hints_10` vardi. Ama burada ipucu cuzdani YOK -- ipucu odullu
+## reklamdan geliyor ve `_grant` o urunu hicbir seye cevirmiyordu. Urun
+## Play Console'da acilsaydi oyuncu para verip hicbir sey almayacakti.
+##
+## Hicbir belirti vermiyor: kod derleniyor, oyun calisiyor, satin alma
+## akisi bile "basarili" donuyor. O yuzden kural teste baglandi: PRODUCTS
+## icindeki her kimlik, `_grant` govdesinde gecmek ZORUNDA.
+func t_urun_karsiligi() -> void:
+	print("- urun karsiligi")
+	var S = load("res://scripts/store/store_service.gd")
+	var kod := _kodu_oku("res://scripts/store/store_service.gd")
+	var govde := kod.substr(kod.find("func _grant("))
+	check(govde != "", "_grant bulunabiliyor")
+	for id in S.PRODUCTS.keys():
+		check(govde.contains('"%s"' % id),
+			"%s urununun _grant icinde karsiligi var" % id)

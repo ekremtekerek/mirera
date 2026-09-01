@@ -19,9 +19,19 @@ extends Node
 
 signal purchased(product_id: String)
 
+##
+## Satilan urunler.
+##
+## MIRERA'DA TEK URUN VAR. Fusera'dan gelen `hints_10` KALDIRILDI:
+## burada ipucu cuzdani yok, ipucu odullu reklamdan geliyor ve `_grant`
+## onu hicbir seye cevirmiyordu. Yani urun magazada acilsa oyuncu para
+## verip hicbir sey almayacakti -- hem politika ihlali hem de fark
+## edilmesi zor bir hata, cunku kod derleniyor ve oyun calisiyor.
+##
+## Kural: buraya eklenen HER urunun `_grant` icinde bir karsiligi
+## olmali. `t_urun_karsiligi()` testi bunu zorluyor.
 const PRODUCTS := {
 	"no_ads": {"kind": "non_consumable", "fallback": "₺129,00"},
-	"hints_10": {"kind": "consumable", "fallback": "₺29,00", "hints": 10},
 }
 
 var busy := false
