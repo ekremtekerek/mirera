@@ -29,6 +29,7 @@ func _initialize() -> void:
 	t_ad_policy()
 	t_store_gate()
 	t_export_safety()
+	t_kurulum()
 	print("\n%d kontrol, %d hata" % [checks, failed])
 	quit(1 if failed > 0 else 0)
 
@@ -393,3 +394,131 @@ func _csv_anahtarlari() -> Array:
 			k.append(row[0])
 	fa.close()
 	return k
+
+
+##
+## KURULUM DENETIMI.
+##
+## Buradaki her satir, YASANMIS ve SESSIZ bir arizanin karsiligi. Ortak
+## ozellikleri sunlar: oyun derleniyor, aciliyor, oynaniyor -- ve tek bir
+## hata mesaji vermeden yanlis calisiyor. Hicbiri oynayarak fark
+## edilemiyor, cogu ancak magazada ya da AdMob panosunda haftalar sonra
+## goruluyor.
+##
+## O yuzden denetim bir kontrol listesi degil, TEST. Kontrol listesi
+## unutuluyor; test dusuyor.
+func t_kurulum() -> void:
+	print("- kurulum denetimi")
+
+	# 1) EKRAN YONU. `handheld/orientation` bir TAM SAYI enum: 0=YATAY
+	# (varsayilan), 1=DIKEY. Metin ("portrait") yazilirsa sessizce yok
+	# sayiliyor ve oyun telefonda yatay aciliyor. Fusera'da bu ancak
+	# cihazda fark edildi.
+	check(int(ProjectSettings.get_setting("display/window/handheld/orientation", 0)) == 1,
+		"ekran yonu DIKEY (tam sayi 1)")
+
+	# 2) ETC2/ASTC olmadan Android disa aktarimi dokulari reddediyor.
+	check(bool(ProjectSettings.get_setting(
+		"rendering/textures/vram_compression/import_etc2_astc", false)),
+		"ETC2/ASTC doku sikistirmasi acik")
+
+	# 3) EKLENTI KAYDI. `project.godot` bir ConfigFile ve yorum karakteri
+	# TEK noktali virgul. `##` ile yorum yazilirsa Godot bolum basliklarini
+	# ayristiramiyor, [editor_plugins] sessizce kayboluyor ve reklam +
+	# satin alma derlemeye HIC girmiyor. Belirti, derleme gunlugundeki bir
+	# satirin YOKLUGU. Fusera'da tam olarak bu oldu.
+	var eklenti := PackedStringArray(ProjectSettings.get_setting(
+		"editor_plugins/enabled", PackedStringArray()))
+	for yol in ["res://addons/admob/plugin.cfg",
+			"res://addons/GodotGooglePlayBilling/plugin.cfg"]:
+		check(eklenti.has(yol), "eklenti kayitli: %s" % yol)
+
+	# 4) AdMob UYGULAMA KIMLIGI.
+	#
+	# Ayarin `project.godot`ta GORUNMEMESI tek basina hata degil: eklenti
+	# ayari Google'in TEST uygulama kimligiyle kayitliyor ve Godot,
+	# varsayilanina esit olan hicbir ayari dosyaya yazmiyor. Disa aktarimda
+	# ayni varsayilan yeniden geliyor, yani manifest dogru dolduruluyor.
+	#
+	# ONEMLI OLAN SU: canli reklam birimleri doldurulmussa uygulama kimligi
+	# de GERCEK olmali. Aksi halde istekler Google'in test uygulamasina
+	# gidiyor -- birimler canli, oyun calisiyor, panoda tek istek yok.
+	var test_app_id := "ca-app-pub-3940256099942544~3347511713"
+	var pg := FileAccess.get_file_as_string("res://project.godot")
+	var gercek_kimlik := pg.contains("general/android/app_id=") \
+		and not pg.contains(test_app_id)
+	if AdMobAdProvider.canli_birimler_hazir():
+		check(gercek_kimlik,
+			"canli birim varken AdMob uygulama kimligi de gercek olmali")
+	else:
+		print("  NOT: AdMob uygulama kimligi TEST kimligi -- canli birimlerle"
+			+ " birlikte guncellenecek")
+
+	# 5) IKONLAR. Yollar `export_presets.cfg`ten OKUNUYOR, teste sabit
+	# yazilmiyor: asil risk bir on ayarin VAR OLMAYAN dosyayi gostermesi.
+	# Bos birakilan alan ise Godot'un varsayilan robot simgesiyle
+	# derlenmesine yol aciyor ve bu, magaza listesinde fark edilmiyor.
+	var ep := FileAccess.get_file_as_string("res://export_presets.cfg")
+	var re_ikon := RegEx.create_from_string(
+		r'launcher_icons/[a-z0-9_]+="(res://[^"]+)"')
+	var gorulen := {}
+	for m in re_ikon.search_all(ep):
+		var yol := m.get_string(1)
+		if gorulen.has(yol):
+			continue
+		gorulen[yol] = true
+		check(ResourceLoader.exists(yol), "on ayardaki ikon var: %s" % yol)
+	check(gorulen.size() >= 3,
+		"on ayarda ikon yollari tanimli (%d)" % gorulen.size())
+	# 6) REKLAM BASLATMA ZINCIRI -- bu oyunun en pahali sessiz hatasi.
+	#
+	# Fusera'da riza akisi yoktu; yerine `if consent_mode != "": _init_sdk()`
+	# vardi. `Save.consent` ilk kurulumda "" ve hicbir yerde doldurulmuyor,
+	# yani MobileAds.initialize() HIC cagrilmiyor: tek reklam istegi
+	# cikmiyor, kod dogru gorunuyor, gelir sifir.
+	var kod := _kodu_oku("res://scripts/ads/admob_ad_provider.gd")
+	check(kod != "", "reklam saglayicisi okunabiliyor")
+	check(not kod.contains('consent_mode != ""'),
+		"SDK baslatma bos bir riza dizesine BAGLI DEGIL")
+	check(kod.contains("_request_consent()"), "UMP riza akisi cagriliyor")
+	# Iki gozcu: biri riza akisi hic donmezse, digeri SDK baslatma geri
+	# cagrisi hic donmezse devreye giriyor. Foldera'da ikincisi eksikti ve
+	# panoda iki gun boyunca "istek: 0" goruldu.
+	check(kod.contains("func _gozcu_baslat"), "riza gozcusu var")
+	check(kod.contains("func _yukleme_gozcusu"), "yukleme gozcusu var")
+	check(kod.count("preload_all()") >= 2,
+		"preload_all hem SDK geri cagrisindan hem gozcuden cagriliyor")
+
+	# 7) CANLI BIRIM KAPISI. Bos birim kimligiyle AdMob istegi sessizce
+	# basarisiz oluyor; "liveads" etiketli bir derlemede bu, gelirin
+	# tamaminin kaybi demek ve baska hicbir belirtisi yok.
+	check(kod.contains("canli_birimler_hazir()"),
+		"canli birim kapisi yerinde")
+
+	# 8) ANDROID DERLEME SABLONU. `android/` varsa icinde `.gdignore`
+	# BULUNMALI: yoksa duzenleyici o dizini normal proje icerigi saniyor,
+	# ilk derleme geciyor, ikincisi kendi ciktisini yeniden icine alip kat
+	# kat derinlesen yollarda cokuyor. Hata mesaji eksik bir dosyadan soz
+	# ettigi icin asil nedeni gostermiyor.
+	var kok := ProjectSettings.globalize_path("res://")
+	if DirAccess.dir_exists_absolute(kok + "android"):
+		check(FileAccess.file_exists(kok + "android/.gdignore"),
+			"android/.gdignore var")
+	else:
+		print("  NOT: android/ yok -- derleme sablonu henuz kurulmamis")
+
+
+## Kaynak dosyayi YORUM SATIRLARI ATILMIS halde okur.
+##
+## Sart: bu dosyalarin aciklamalari eski hatalari ORNEK OLARAK iceriyor,
+## yani ham metinde arama yapmak kendi aciklamamizi hata sanip yanlis
+## alarm veriyor. Denetimin ilk halinde tam olarak bu oldu.
+func _kodu_oku(yol: String) -> String:
+	if not FileAccess.file_exists(yol):
+		return ""
+	var out := ""
+	for satir in FileAccess.get_file_as_string(yol).split("\n"):
+		if satir.strip_edges().begins_with("#"):
+			continue
+		out += satir + "\n"
+	return out
