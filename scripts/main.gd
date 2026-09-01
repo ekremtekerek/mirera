@@ -54,6 +54,8 @@ func _ready() -> void:
 			add_child(load("res://tools/icon_gen.gd").new())
 		if a == "probe":
 			add_child(load("res://tools/input_probe.gd").new())
+		if a == "soak":
+			add_child(load("res://tools/soak_runner.gd").new())
 		if a == "shot":
 			add_child(load("res://tools/shot_runner.gd").new())
 
