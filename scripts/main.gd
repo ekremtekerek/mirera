@@ -203,8 +203,16 @@ func _ipucu_iste() -> void:
 			_bildir(Loc.t("TOAST_HINT"))
 		return
 	_btn_hint.disabled = true
+	# BEKLEME SESSIZ GECMEMELI. Reklam hazir degilse 8 saniye bekleniyor;
+	# o sure boyunca ekranda hicbir sey yoksa oyuncu "hicbir sey olmadi"
+	# diye okuyor ve sonucu bildiren mesaji beklemeden bakmayi birakiyor.
+	# Foldera'da tam olarak bu oldu: "hazirlaniyor diyor ama reklam
+	# cikmiyor" raporu, reklam gelmedigi icin degil, CEVAP GORULMEDIGI
+	# icin geldi. Mesaj sonuc gelene kadar EKRANDA KALIYOR.
+	_bekleme_goster(Loc.t("TOAST_AD_LOADING"))
 	var hazir := await Ads.await_rewarded(8.0)
 	if hazir and await Ads.show_rewarded("hint"):
+		_toast.visible = false
 		if board.mark_hint():
 			_bildir(Loc.t("TOAST_HINT"))
 	else:
@@ -212,6 +220,13 @@ func _ipucu_iste() -> void:
 	_btn_hint.disabled = false
 
 
+## Sonuca kadar EKRANDA KALAN mesaj: bekleme suresince gorunur olmali.
+func _bekleme_goster(metin: String) -> void:
+	_toast.text = metin
+	_toast.visible = true
+
+
+## Kisa bildirim: gorunur, sonra kendiliginden kayboluyor.
 func _bildir(metin: String) -> void:
 	_toast.text = metin
 	_toast.visible = true
