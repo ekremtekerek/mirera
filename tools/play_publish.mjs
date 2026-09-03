@@ -267,11 +267,23 @@ if (aab) {
   console.log(`  "${track}" kanalina alindi\n`)
 }
 
-if (privacyUrl) {
-  await call(tok, 'PUT', `${E}/details`, {
-    json: { defaultLanguage: 'en-US', contactEmail: opt('email', undefined), privacyPolicyUrl: privacyUrl },
-  })
-  console.log(`  gizlilik politikasi: ${privacyUrl}\n`)
+// `PUT /details` TUM kaynagi degistiriyor: gondermedigin alan SILINIYOR.
+//
+// Fusera'da bu, listelemenin `contactWebsite` alanini ucurdu ve AdMob'un
+// app-ads.txt eslesmesini bir gun boyunca bozdu -- reklamlar "sinirli
+// reklam sunumu"nda takildi ve sebebi gorunur degildi. Once GET ile
+// mevcut hali alip uzerine yaziyoruz.
+if (privacyUrl || opt('site') || opt('email')) {
+  const mevcut = await call(tok, 'GET', `${E}/details`)
+  const yeni = {
+    ...mevcut,
+    defaultLanguage: mevcut.defaultLanguage || 'en-US',
+    ...(opt('email') ? { contactEmail: opt('email') } : {}),
+    ...(opt('site') ? { contactWebsite: opt('site') } : {}),
+    ...(privacyUrl ? { privacyPolicyUrl: privacyUrl } : {}),
+  }
+  await call(tok, 'PUT', `${E}/details`, { json: yeni })
+  console.log(`  listeleme bilgileri guncellendi${privacyUrl ? `: ${privacyUrl}` : ''}\n`)
 }
 
 if (flag('no-commit')) {
