@@ -91,6 +91,11 @@ for (const kanal of ['production', 'beta', 'alpha', 'internal']) {
 // Uygulamanin kendi yayin durumu: incelemede mi, yayinda mi.
 const app = await call(tok, 'GET', `${API}/applications/${PKG}/edits/${edit.id}/details`)
 console.log(`\n  varsayilan dil: ${app.defaultLanguage}   iletisim: ${app.contactEmail ?? '—'}`)
+// Site alani AdMob icin KRITIK: app-ads.txt dogrulamasi listelemedeki bu
+// adrese bakiyor. Fusera'da bos kaldi ve reklamlar bir gun boyunca
+// "sinirli reklam sunumu"nda takildi; alan hicbir yerde gorunmedigi icin
+// sebebi aramak uzun surdu. Artik her durum sorgusunda yaziliyor.
+console.log(`  site: ${app.contactWebsite ?? '— (AdMob app-ads.txt dogrulamasi BUNA bakiyor)'}`)
 console.log('\n  Not: "completed" = surum kanalda ve tam yayilimda; Google incelemesi')
 console.log('  bittikten sonra magazada gorunur. Inceleme durumu API\'de yer almiyor,')
 console.log('  Play Console "Yayinlama ozeti" sayfasindan bakiliyor.\n')
