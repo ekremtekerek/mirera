@@ -1,0 +1,4 @@
+# core.autocrlf=true bu makinede acik. Kabuk betikleri CRLF ile cikarsa
+# bash "bad interpreter: /usr/bin/env bash^M" der ve calismaz. Satir
+# sonlarini LF'e sabitliyoruz.
+*.sh text eol=lf
