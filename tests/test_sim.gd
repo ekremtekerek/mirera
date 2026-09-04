@@ -313,10 +313,19 @@ func t_ad_policy() -> void:
 	var alinmis := temel.duplicate(); alinmis.ads_removed = true
 	check(not AdPolicy.should_show_interstitial(alinmis), "reklamsiz satin alma kapatir")
 
+	# Kapi UC sarta bakiyor: iki birim kimligi VE uygulama kimligi.
+	# Ucuncusu Mirera 1.0.1 yayina cikip sifir kazandiktan sonra eklendi:
+	# app_id bos kalirsa eklenti manifest'e Google'in TEST uygulama
+	# kimligini yaziyor ve birimler dogru olsa bile istek gelmiyor.
+	var app_id := str(ProjectSettings.get_setting("admob/general/android/app_id", ""))
 	check(AdMobAdProvider.canli_birimler_hazir()
 		== (AdMobAdProvider.LIVE_INTERSTITIAL != ""
-			and AdMobAdProvider.LIVE_REWARDED != ""),
-		"canli birim kapisi iki kimligi de ariyor")
+			and AdMobAdProvider.LIVE_REWARDED != ""
+			and app_id != "" and app_id != AdMobAdProvider.TEST_APP_ID),
+		"canli birim kapisi iki birimi VE uygulama kimligini ariyor")
+	if AdMobAdProvider.LIVE_INTERSTITIAL != "" or AdMobAdProvider.LIVE_REWARDED != "":
+		check(app_id != "" and app_id != AdMobAdProvider.TEST_APP_ID,
+			"canli birim doluysa uygulama kimligi de gercek")
 	if not AdMobAdProvider.canli_birimler_hazir():
 		print("  NOT: canli reklam birimleri henuz bos -- AdMob uygulamasi acilinca doldurulacak")
 

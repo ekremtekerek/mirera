@@ -10,14 +10,18 @@ extends AdProvider
 
 const TEST_INTERSTITIAL := "ca-app-pub-3940256099942544/1033173712"
 const TEST_REWARDED := "ca-app-pub-3940256099942544/5224354917"
-## Gercek birimler. Yalnizca "liveads" etiketi tasiyan derlemede
-## kullanilirlar. MIRERA icin AdMob uygulamasi HENUZ ACILMADI -- bos
-## birakildilar ve `canli_birimler_hazir()` bu yuzden false donuyor:
-## derleme ne olursa olsun TEST birimi kullaniliyor. Doldurmadan once
-## AdMob uygulamasinin Play magaza girisine baglanmasi da gerekiyor,
-## yoksa sunum "sinirli" kaliyor; bkz. ANDROID.md.
-const LIVE_INTERSTITIAL := ""
-const LIVE_REWARDED := ""
+## Gercek birimler (yayinci ca-app-pub-6484682017091395). Yalnizca
+## "liveads" etiketi tasiyan derlemede kullanilirlar.
+##
+## AdMob uygulamasi 2026-09-04'te acildi ve Play magaza girisine
+## baglandi -- baglanti sart, yoksa sunum "sinirli" kaliyor.
+##
+## Uygulama kimligi AYRI bir yerde: project.godot > [admob] >
+## general/android/app_id. Orasi bos kalirsa eklenti manifest e
+## Google'in TEST uygulama kimligini yaziyor ve birimler dogru olsa
+## bile hicbir istek gelmiyor -- 1.0.1 tam olarak boyle yayinlandi.
+const LIVE_INTERSTITIAL := "ca-app-pub-6484682017091395/9209801793"
+const LIVE_REWARDED := "ca-app-pub-6484682017091395/3901634794"
 
 const SHOW_TIMEOUT := 90.0
 const RELOAD_DELAY := 3.0
@@ -66,8 +70,18 @@ var _preloaded := false
 ## O yuzden eksikse CANLIYA GECILMIYOR: test birimiyle devam ediliyor ve
 ## gunluge hata basiliyor. Gorunur bir "test reklami" yanlis kimlikle
 ## sessizce olmekten iyidir.
+##
+## UYGULAMA KIMLIGI de sayiliyor. Birimler dogru olsa bile
+## project.godot > [admob] > general/android/app_id bos birakilirsa
+## eklenti manifest'e GOOGLE'IN TEST uygulama kimligini yaziyor; SDK
+## acilis yapiyor, oyun kusursuz gorunuyor ve hicbir istek sayilmiyor.
+## Mirera 1.0.1 tam olarak boyle yayinlandi ve sifir kazandi.
+const TEST_APP_ID := "ca-app-pub-3940256099942544~3347511713"
+
 static func canli_birimler_hazir() -> bool:
-	return LIVE_INTERSTITIAL != "" and LIVE_REWARDED != ""
+	var app_id := str(ProjectSettings.get_setting("admob/general/android/app_id", ""))
+	return (LIVE_INTERSTITIAL != "" and LIVE_REWARDED != ""
+		and app_id != "" and app_id != TEST_APP_ID)
 
 
 ##
