@@ -19,10 +19,37 @@
 //
 import { createSign } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
-import { existsSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 
 const PKG = 'com.mirera.game'
+//
+// Betikteki paket adi ile on ayarlardaki AYNI mi.
+//
+// Bu dosyalar birbirinden kopyalanarak turuyor ve `PKG` satirini
+// degistirmeyi unutmak, HAZIR BIR AAB I BASKA BIR OYUNUN CANLI
+// LISTESINE yuklemek demek. Yukleme basarili olur, hicbir uyari cikmaz.
+function paketiDogrula(kokDizin) {
+  const yol = path.join(kokDizin, '..', 'export_presets.cfg')
+  let metin
+  try {
+    metin = readFileSync(yol, 'utf8')
+  } catch {
+    return          // on ayar dosyasi yoksa sessiz gec: bu kontrol bir ek guvence
+  }
+  const bulunan = [...metin.matchAll(/^package\/unique_name="([^"]+)"/gm)]
+    .map((m) => m[1])
+  if (bulunan.length === 0) return
+  const uyusmayan = bulunan.filter((p) => p !== PKG)
+  if (uyusmayan.length > 0) {
+    die(
+      `paket adi uyusmuyor.\n` +
+      `  betikte      : ${PKG}\n` +
+      `  on ayarlarda : ${[...new Set(bulunan)].join(', ')}\n` +
+      `Yanlis uygulamaya yukleme yapmamak icin duruldu.`
+    )
+  }
+}
 const API = 'https://androidpublisher.googleapis.com/androidpublisher/v3'
 const UPLOAD = 'https://androidpublisher.googleapis.com/upload/androidpublisher/v3'
 const ALLOWED_TRACKS = new Set(['internal', 'alpha', 'beta'])
@@ -173,6 +200,8 @@ const doImages = flag('images')
 if (!doListings && !doImages && !aab) {
   die('yapilacak is yok. --listings, --images ve/veya --aab <dosya> ver.')
 }
+
+paketiDogrula(metinKok)
 
 console.log(`\nMIRERA -> Google Play  (${PKG})`)
 const tok = await token(keyPath)
