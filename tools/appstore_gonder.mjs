@@ -98,6 +98,22 @@ if (bagla) {
 
 if (!bagli) throw new Error("once --bagla ile paketi baglayin");
 
+// ZATEN GONDERILMISSE BURADA DUR.
+//
+// Ikinci kez calistirmak yeni bir inceleme KABI aciyor, sonra surumu
+// ona eklerken su hatayla dusuyor:
+//
+//   409: This resource cannot be reviewed, please check associated
+//        errors to see why.
+//
+// Mesaj "bir sey eksik" diye okunuyor ama sebep bu: surum zaten
+// gonderimde. Geriye de bos bir taslak kap kaliyor ve o API'den
+// SILINEMIYOR (403). O yuzden once duruma bakiliyor.
+if (sv.attributes.appStoreState !== "PREPARE_FOR_SUBMISSION") {
+  console.log(`\nzaten gonderilmis (${sv.attributes.appStoreState}) -- bir sey yapilmadi`);
+  process.exit(0);
+}
+
 // Inceleme gonderimi IKI adim: once kap aciliyor, sonra surum ONA
 // ekleniyor, en sonda gonderim "submitted" yapiliyor. Tek POST ile
 // gonderilmiyor.
