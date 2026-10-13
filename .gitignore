@@ -16,6 +16,9 @@ android/
 *-sa.json
 *.pem
 *.p12
+*.p8
+*.csr
+*.cer
 
 .DS_Store
 Thumbs.db

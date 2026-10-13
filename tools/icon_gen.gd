@@ -38,8 +38,10 @@ func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(OUT)
 	await get_tree().process_frame
 	_icon(512, "icon-512.png")
-	# 1024 URETILMIYOR: Play 512 istiyor ve piksel piksel cizim 1024 tuvalde
-	# dakikalar suruyor. Gerekirse 512 buyutulur.
+	# 1024 CIZILMIYOR, BUYUTULUYOR: piksel piksel cizim 1024 tuvalde
+	# dakikalar suruyor ve ikon duz geometrik oldugu icin lanczos
+	# buyutmesiyle cizim arasinda gozle fark yok.
+	_app_store_ikonu()
 	_uygulama_ikonlari()
 	await _feature()
 	print("ICON OK -> ", OUT)
@@ -181,6 +183,26 @@ func _icon(boy: int, ad: String) -> void:
 	_mark(img, float(boy))
 	img.save_png("%s/%s" % [OUT, ad])
 	print("  ", ad)
+
+
+##
+## APP STORE IKONU: 1024x1024 ve ALFA KANALI OLMAMALI.
+##
+## Saydam pikseli olan ikon yuklemede "Invalid large app icon" ile geri
+## donuyor ve bu, on bes dakikalik bir derlemenin SONUNDA ortaya cikiyor.
+## `FORMAT_RGB8`a cevirmek kanali tamamen dusuruyor.
+##
+## `brand/` altinda duruyor cunku magaza ciktisi degil DERLEME GIRDISI:
+## Godot'nun iOS disa aktarimi onu okuyup ikon setini uretiyor.
+func _app_store_ikonu() -> void:
+	var img := _canvas(512, 512)
+	_mark(img, 512.0)
+	img.resize(1024, 1024, Image.INTERPOLATE_LANCZOS)
+	img.convert(Image.FORMAT_RGB8)
+	var dizin := ProjectSettings.globalize_path("res://brand")
+	DirAccess.make_dir_recursive_absolute(dizin)
+	img.save_png("%s/ios-icon-1024.png" % dizin)
+	print("  ios-icon-1024.png (alfasiz)")
 
 
 ##

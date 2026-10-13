@@ -20,6 +20,31 @@ const W := 1080
 const H := 1920
 
 ##
+## APP STORE OLCULERI.
+##
+##   godot --path . -- store ios en     iPhone 6.1"
+##   godot --path . -- store ipad en    13 inclik iPad
+##
+## iPAD SETI ZORUNLU, istege bagli degil: Godot'nun iOS disa aktariminda
+## cihaz ailesi secenegi yok, uretilen Xcode projesi EVRENSEL. Paket
+## iPad'i de hedefledigi icin App Store Connect "Add for Review"da
+## 13 inclik iPad goruntusu olmadan gecmiyor.
+##
+## PENCERE OLCUSU HEDEFIN YARISI. Yakalanan kare PENCERE boyutunda
+## geliyor (stretch=canvas_items), yani oran dogrudan burada tutmali;
+## 9:16 bir kareyi 1206x2622'ye germek goruntuyu bozar. Yarisini almak
+## hem orani koruyor hem pencereyi ekrana sigdiriyor.
+const IOS_W := 1206
+const IOS_H := 2622
+const IOS_PENCERE := Vector2i(603, 1311)
+const IPAD_W := 2048
+const IPAD_H := 2732
+const IPAD_PENCERE := Vector2i(1024, 1366)
+
+var _ios := false
+var _ipad := false
+
+##
 ## Her kare: [seviye, altyazi anahtari, cozulmus mu, ozel ekran]
 ##
 ## Kare secimi altyaziya GORE yapildi, tersi degil:
@@ -44,10 +69,22 @@ var _yazi: Label
 
 func _ready() -> void:
 	_force_lang()
+	_ios = OS.get_cmdline_user_args().has("ios")
+	_ipad = OS.get_cmdline_user_args().has("ipad")
+	if _ipad:
+		_ios = true
+
+	var pencere := Vector2i(720, 1280)
+	if _ipad:
+		pencere = IPAD_PENCERE
+	elif _ios:
+		pencere = IOS_PENCERE
 	DisplayServer.window_set_position(Vector2i(0, 0))
-	DisplayServer.window_set_size(Vector2i(720, 1280))
+	DisplayServer.window_set_size(pencere)
+
 	main = get_parent()
-	_out = "%s/%s" % [OUT_BASE, Loc.lang]
+	var onek := "ipad-" if _ipad else ("ios-" if _ios else "")
+	_out = "%s/%s%s" % [OUT_BASE, onek, Loc.lang]
 	DirAccess.make_dir_recursive_absolute(_out)
 	_kur()
 	await _run()
@@ -134,9 +171,24 @@ func _kaydet(no: int) -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	var img := get_viewport().get_texture().get_image()
-	# 720x1280 -> 1080x1920: ikisi de 9:16, oran bozulmuyor.
-	img.resize(W, H, Image.INTERPOLATE_LANCZOS)
-	img.save_png("%s/%02d.png" % [_out, no])
+
+	# PENCERE EKRANA SIGMAZSA Windows onu kirpiyor ve yakalanan kare
+	# istenen orandan kisa cikiyor; sonraki `resize` da onu sessizce
+	# geriyor. Ilk karede ham olcuyu yazdirmak bunu goruunur kiliyor.
+	if no == 1:
+		print("  yakalanan kare: ", img.get_size())
+
+	if _ipad:
+		img.resize(IPAD_W, IPAD_H, Image.INTERPOLATE_LANCZOS)
+		img.save_jpg("%s/%02d.jpg" % [_out, no], 0.92)
+	elif _ios:
+		# 603x1311 -> 1206x2622: tam iki kat, oran bozulmuyor.
+		img.resize(IOS_W, IOS_H, Image.INTERPOLATE_LANCZOS)
+		img.save_jpg("%s/%02d.jpg" % [_out, no], 0.92)
+	else:
+		# 720x1280 -> 1080x1920: ikisi de 9:16, oran bozulmuyor.
+		img.resize(W, H, Image.INTERPOLATE_LANCZOS)
+		img.save_png("%s/%02d.png" % [_out, no])
 	print("  kare %d" % no)
 
 

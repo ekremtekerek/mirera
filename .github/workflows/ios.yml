@@ -1,0 +1,183 @@
+#
+# Mirera -- iOS derlemesi ve TestFlight yuklemesi.
+#
+# NEDEN BURADA: gelistirme makinesi Windows ve Godot'nun kendi uyarisi
+# net -- ".ipa yalnizca macOS uzerinde olusturulabilir". Godot Xcode
+# projesini Windows'ta da uretiyor; imzalama ve paketleme icin bir mac
+# gerekiyor, bu is akisi onu sagliyor.
+#
+# NEDEN TEK IS (Arcera'da iki vardi): magaza metinleri ve ekran
+# goruntuleri burada DEGIL, gelistirme makinesinden API ile gidiyor
+# (tools/appstore_text.mjs, appstore_shots.mjs, appstore_video.mjs).
+# Boylece ne 104 metin dosyasi ne de 78 ekran goruntusu depoya giriyor;
+# Arcera'da tam olarak bu, 13 MB'lik magaza goruntusunun oyun paketine
+# sizmasina yol acmisti.
+#
+# GEREKEN GIZLILER:
+#   ASC_KEY_ID        App Store Connect API anahtarinin kimligi
+#   ASC_ISSUER_ID     Hesabin yayinci kimligi
+#   ASC_KEY_P8        Anahtarin KENDISI (.p8 icerigi)
+#   IOS_CERT_P12      Dagitim sertifikasi + ozel anahtar (base64 .p12)
+#   IOS_CERT_PASSWORD .p12 parolasi
+#
+# Son ikisi `tools/ios_sertifika.sh` ile kuruluyor ve HESAP GENELINDE
+# gecerli -- Arcera ile ayni sertifika.
+
+name: iOS
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["ios-v*"]
+
+env:
+  GODOT_SURUM: "4.7.1-stable"
+  GODOT_KISA: "4.7.1.stable"
+  PAKET_ADI: "com.mirera.game"
+  ADMOB_IOS: "ca-app-pub-6484682017091395~7013735481"
+
+jobs:
+  derle:
+    name: IPA + TestFlight
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      # Godot ve sablonlar birlikte ~1.5 GB. Onbellek olmadan her kosu
+      # dakikalarini indirmeye harciyor -- ve macOS dakikalari ON KAT
+      # sayiliyor.
+      - name: Godot onbellegi
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot
+            ~/Library/Application Support/Godot/export_templates
+          key: godot-${{ env.GODOT_SURUM }}
+
+      - name: Godot kur
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p ~/godot
+          curl -fL -o /tmp/godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_SURUM}/Godot_v${GODOT_SURUM}_macos.universal.zip"
+          unzip -q /tmp/godot.zip -d ~/godot
+          SABLON="$HOME/Library/Application Support/Godot/export_templates/${GODOT_KISA}"
+          mkdir -p "$SABLON"
+          curl -fL -o /tmp/templates.tpz \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_SURUM}/Godot_v${GODOT_SURUM}_export_templates.tpz"
+          unzip -q /tmp/templates.tpz -d /tmp/tpl
+          mv /tmp/tpl/templates/* "$SABLON"/
+
+      - name: Godot yolu
+        run: echo "GODOT=$HOME/godot/Godot.app/Contents/MacOS/Godot" >> "$GITHUB_ENV"
+
+      # Derlemeden ONCE: testler saniyeler suruyor, imzalanmis bir paketi
+      # sinamak ise gec kaliyor.
+      - name: Mantik testleri
+        run: |
+          "$GODOT" --headless --path . --script res://tests/test_sim.gd
+
+      - name: Xcode projesini uret
+        run: |
+          set -uo pipefail
+          mkdir -p build/ios
+          # Ilk acilista varliklarin ice aktarilmasi gerekiyor; aksi
+          # halde disa aktarim eksik pakete yol aciyor.
+          "$GODOT" --headless --path . --import || true
+          #
+          # GODOT'UN HATASI YUTULUYOR -- BILEREK.
+          #
+          # macOS'ta Godot yalnizca Xcode projesini uretmiyor, ardindan
+          # KENDI `xcodebuild`ini de calistirip .ipa yapmaya kalkiyor
+          # (Windows'ta bunu yapamadigi icin orada yalnizca uyari
+          # veriyor). O cagri bizim App Store Connect API anahtarimizi
+          # TASIMIYOR, dolayisiyla otomatik imzalama dagitim profilini
+          # indiremiyor ve gelistirme profiline dusuyor. Sonuc, projenin
+          # Release yapilandirmasindaki "Apple Distribution" ile
+          # celisiyor.
+          #
+          # Bizim ondan istedigimiz tek sey PROJE. Arsivi bir sonraki
+          # adimda, anahtarla birlikte kendimiz aliyoruz. O yuzden bu
+          # cagri basarisiz olabilir; onemli olan projenin yazilmis
+          # olmasi ve asagida bunu DOGRULUYORUZ.
+          "$GODOT" --headless --path . \
+            --export-release "iOS" "$PWD/build/ios/MIRERA.xcodeproj" \
+            || echo "not: Godot'un kendi derlemesi dustu, proje kontrol ediliyor"
+          test -f build/ios/MIRERA.xcodeproj/project.pbxproj \
+            || { echo "HATA: Xcode projesi uretilmedi"; exit 1; }
+          test -f build/ios/MIRERA.pck \
+            || { echo "HATA: oyun paketi (.pck) yok"; exit 1; }
+          echo "Xcode projesi hazir"
+
+      # App Store ikonunda ALFA KANALI OLMAMALI; Apple yuklemede
+      # reddediyor. Kaynak ikon alfasiz uretiliyor ama bu, derleme
+      # bittikten SONRA ortaya cikan bir hata oldugu icin burada da
+      # bakiliyor -- on bes dakika once ogrenmek bedava.
+      - name: Ikon denetimi
+        run: |
+          set -euo pipefail
+          IKON="build/ios/MIRERA/Images.xcassets/AppIcon.appiconset/Icon-1024.png"
+          test -f "$IKON"
+          TIP=$(python3 -c "import sys;print(open(sys.argv[1],'rb').read()[25])" "$IKON")
+          echo "renk tipi: $TIP (2 = RGB, 6 = RGBA)"
+          test "$TIP" = "2" || { echo "HATA: ikonda alfa kanali var"; exit 1; }
+
+      # Yanlis AdMob kimligi SESSIZ bir hata: oyun calisir, reklam
+      # gorunur, panoda tek istek yoktur. Mirera 1.0.1 tam olarak boyle
+      # yayinlandi ve sifir kazandi.
+      - name: AdMob kimlik denetimi
+        run: |
+          set -euo pipefail
+          PLIST="build/ios/MIRERA/MIRERA-Info.plist"
+          grep -q "$ADMOB_IOS" "$PLIST" \
+            || { echo "HATA: iOS AdMob kimligi pakette yok"; exit 1; }
+          grep -q "3940256099942544" "$PLIST" \
+            && { echo "HATA: test AdMob kimligi pakette"; exit 1; } || true
+
+      # Magaza goruntuleri oyun paketine SIZMAMALI. Arcera'da
+      # `export_filter=all_resources` fastlane/screenshots'i da pakete
+      # koydu: 13 MB olu agirlik, indirme suresine dogrudan yansiyor ve
+      # yalnizca CI gunlugunun savepack satirlarindan fark edildi.
+      - name: Paket boyutu
+        run: |
+          set -euo pipefail
+          BOYUT=$(stat -f %z build/ios/MIRERA.pck)
+          echo "pck: $((BOYUT / 1024 / 1024)) MB"
+          test "$BOYUT" -lt 31457280 \
+            || { echo "HATA: paket 30 MB'i asti -- magaza gorseli sizmis olabilir"; exit 1; }
+
+      - name: fastlane kur
+        run: gem install fastlane --no-document
+
+      # IMZA, PAKET VE YUKLEME TEK ADIMDA. Gerekcesi fastlane/Fastfile
+      # basinda tek tek yazili.
+      - name: Imzala, paketle, TestFlight'a yukle
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          IOS_CERT_P12: ${{ secrets.IOS_CERT_P12 }}
+          IOS_CERT_PASSWORD: ${{ secrets.IOS_CERT_PASSWORD }}
+        run: fastlane ios paket
+
+      - name: Paketi sakla
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mirera-ipa
+          path: build/ipa/*.ipa
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Gunlukleri sakla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-gunluk
+          path: |
+            build/ios/MIRERA/MIRERA-Info.plist
+            build/ios/MIRERA/export_options.plist
+          retention-days: 7

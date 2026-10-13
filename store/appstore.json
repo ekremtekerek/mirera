@@ -1,0 +1,106 @@
+{
+  "_hakkinda": [
+    "App Store'a OZEL metinler. Burada YALNIZCA Play'de karsiligi olmayan",
+    "alanlar duruyor; uygulama adi ve aciklama govdesi copy.json'dan",
+    "geliyor ve iki yerde tutulmuyor.",
+    "",
+    "Neden ayri bir dosya: Apple'in alanlari Play'inkiyle ortusmuyor.",
+    "Play'in 80 karakterlik 'kisa aciklama'sinin karsiligi Apple'da 30",
+    "karakterlik ALT BASLIK; Play'de hic olmayan bir ANAHTAR KELIME alani",
+    "var (100 karakter) ve incelemeden gecmeden degistirilebilen bir",
+    "TANITIM METNI (170 karakter).",
+    "",
+    "Sinirlari tools/appstore_meta.mjs denetliyor. Elle saymayin: Apple",
+    "KARAKTER sayiyor, bayt degil, ve Turkce/Rusca/Vietnamca metinlerde",
+    "ikisi ayni sey degil.",
+    "",
+    "'yeni' (surum notlari) alani BURADA YOK. Ilk surumde App Store",
+    "'Yenilikler' alanini ne istiyor ne de gosteriyor; bos bir metin",
+    "gondermek kaydi reddettiriyor."
+  ],
+  "baglantilar": {
+    "gizlilik": "https://ekremtekerek.github.io/mirera-privacy.html",
+    "destek": "https://ekremtekerek.github.io/mirera-destek.html",
+    "pazarlama": "https://ekremtekerek.github.io/"
+  },
+  "diller": {
+    "en": {
+      "apple": "en-US",
+      "altbaslik": "Turn mirrors. Bend the light.",
+      "anahtar": "beam,reflect,optics,logic,offline,relax,brain,levels,free,zen,physics,calm",
+      "tanitim": "Every board is built backwards from its own solution, so an unsolvable level cannot exist. Three stars means the fewest possible taps."
+    },
+    "tr": {
+      "apple": "tr",
+      "altbaslik": "Aynaları çevir, ışığı bük.",
+      "anahtar": "lazer,yansıma,optik,mantık,çevrimdışı,rahatlatıcı,zekâ,bölüm,ücretsiz,sakin,fizik",
+      "tanitim": "Her tahta kendi çözümünden geriye kurulur; çözülemeyen bir bölüm olamaz. Üç yıldız, mümkün olan en az dokunuş demek."
+    },
+    "es": {
+      "apple": "es-ES",
+      "altbaslik": "Gira espejos, dobla la luz.",
+      "anahtar": "rayo,reflejo,óptica,lógica,sin conexión,relax,mente,niveles,gratis,calma,física",
+      "tanitim": "Cada tablero se construye desde su solución, así que un nivel imposible no puede existir. Tres estrellas: el mínimo de toques."
+    },
+    "pt": {
+      "apple": "pt-BR",
+      "altbaslik": "Gire espelhos, dobre a luz.",
+      "anahtar": "raio,reflexo,óptica,lógica,offline,relaxante,mente,níveis,grátis,calma,física,cérebro",
+      "tanitim": "Cada tabuleiro é construído a partir da própria solução, então um nível impossível não existe. Três estrelas: o mínimo de toques."
+    },
+    "de": {
+      "apple": "de-DE",
+      "altbaslik": "Spiegel drehen, Licht lenken.",
+      "anahtar": "strahl,reflexion,optik,logik,offline,entspannt,denken,level,gratis,ruhig,physik,gehirn",
+      "tanitim": "Jedes Feld wird von seiner Lösung her gebaut — ein unlösbares Level kann es nicht geben. Drei Sterne heißt: die wenigsten Tipps."
+    },
+    "fr": {
+      "apple": "fr-FR",
+      "altbaslik": "Tournez, pliez la lumière.",
+      "anahtar": "rayon,reflet,optique,logique,hors ligne,détente,cerveau,niveaux,gratuit,calme,physique",
+      "tanitim": "Chaque grille est bâtie à partir de sa solution : un niveau insoluble ne peut pas exister. Trois étoiles, c'est le minimum de touches."
+    },
+    "it": {
+      "apple": "it",
+      "altbaslik": "Ruota specchi, piega luce.",
+      "anahtar": "raggio,riflesso,ottica,logica,offline,relax,mente,livelli,gratis,calma,fisica,cervello",
+      "tanitim": "Ogni schema nasce dalla sua soluzione: un livello irrisolvibile non può esistere. Tre stelle significa il minimo dei tocchi."
+    },
+    "ru": {
+      "apple": "ru",
+      "altbaslik": "Крути зеркала, гни луч.",
+      "anahtar": "оптика,отражение,логика,офлайн,релакс,ум,уровни,бесплатно,спокойно,физика,мозг",
+      "tanitim": "Каждое поле строится от своего решения, поэтому нерешаемого уровня не бывает. Три звезды — минимально возможное число касаний."
+    },
+    "pl": {
+      "apple": "pl",
+      "altbaslik": "Obróć lustra, zegnij światło.",
+      "anahtar": "promień,odbicie,optyka,logika,offline,relaks,umysł,poziomy,darmowa,spokój,fizyka,mózg",
+      "tanitim": "Każda plansza powstaje od swojego rozwiązania, więc poziom nie do przejścia nie może istnieć. Trzy gwiazdki to najmniejsza liczba dotknięć."
+    },
+    "nl": {
+      "apple": "nl-NL",
+      "altbaslik": "Draai spiegels, buig licht.",
+      "anahtar": "straal,reflectie,optica,logica,offline,ontspannen,brein,levels,gratis,rustig,fysica",
+      "tanitim": "Elk bord wordt vanaf zijn eigen oplossing gebouwd, dus een onoplosbaar level kan niet bestaan. Drie sterren is het minste aantal tikken."
+    },
+    "id": {
+      "apple": "id",
+      "altbaslik": "Putar cermin, belokkan sinar.",
+      "anahtar": "pantulan,optik,logika,offline,santai,otak,level,gratis,tenang,fisika,tanpa wifi",
+      "tanitim": "Setiap papan dibangun dari solusinya sendiri, jadi level yang mustahil tidak bisa ada. Tiga bintang berarti ketukan paling sedikit."
+    },
+    "vi": {
+      "apple": "vi",
+      "altbaslik": "Xoay gương, bẻ tia sáng.",
+      "anahtar": "phản xạ,quang học,logic,ngoại tuyến,thư giãn,trí não,màn chơi,miễn phí,yên tĩnh,vật lý",
+      "tanitim": "Mỗi bàn chơi được dựng ngược từ lời giải của nó, nên màn không thể giải là điều không tồn tại. Ba sao nghĩa là ít chạm nhất."
+    },
+    "uk": {
+      "apple": "uk",
+      "altbaslik": "Крути дзеркала, гни промінь.",
+      "anahtar": "оптика,відбиття,логіка,офлайн,релакс,розум,рівні,безкоштовно,спокій,фізика,мозок",
+      "tanitim": "Кожне поле будується від власного розв'язку, тому нерозв'язного рівня не буває. Три зірки — найменша можлива кількість дотиків."
+    }
+  }
+}

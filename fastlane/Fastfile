@@ -1,0 +1,156 @@
+# Mirera -- iOS imzalama ve paketleme
+#
+# NEDEN ELLE `xcodebuild` DEGIL: Arcera'da uc kosu boyunca denendi ve her
+# seferinde imza asamasinda dustu. Sirasiyla:
+#
+#   1. Godot macOS'ta kendi `xcodebuild`ini de calistiriyor ve bizim App
+#      Store Connect API anahtarimizi tasimadigi icin dusuyordu.
+#      (Cozuldu: ciktisi yoksayiliyor, biz yalnizca Xcode projesini
+#      aliyoruz.)
+#   2. Projenin Release yapilandirmasinda "Apple Distribution" yaziyor ama
+#      OTOMATIK imzalama arsivi gelistirme kimligiyle imzalamak istiyor;
+#      ikisi celisiyor.
+#   3. Kimligi "Apple Development" yapinca celiski bitti ama bu kez
+#      GELISTIRME profili arandi: "Your team has no devices from which to
+#      generate a provisioning profile." CI'da cihaz yok ve olmayacak.
+#
+# Kok neden hep ayni: otomatik imzalama kafasina gore gelistirme profili
+# istiyor. Cozum onu zorlamak degil, MANUEL imzaya gecip dagitim
+# sertifikasini ve App Store profilini API anahtariyla cekmek -- CI'da
+# standart olan yol zaten bu.
+
+require "base64"
+require "tmpdir"
+require "shellwords"
+
+default_platform(:ios)
+
+APP = "com.mirera.game"
+TAKIM = "3X9H5TXF29"
+PROJE = "build/ios/MIRERA.xcodeproj"
+SEMA = "MIRERA"
+
+platform :ios do
+  desc "Imzali IPA uret ve TestFlight'a yukle"
+  lane :paket do
+    anahtar = app_store_connect_api_key(
+      key_id: ENV.fetch("ASC_KEY_ID"),
+      issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+      key_content: ENV.fetch("ASC_KEY_P8"),
+    )
+
+    # Kosucuda anahtarlik yok; `setup_ci` gecici bir tane kurup
+    # sertifikanin yuklenebilmesini sagliyor.
+    setup_ci
+
+    # ANAHTARLIK YOLU ELLE VERILIYOR.
+    #
+    # `setup_ci` gecici anahtarligi kuruyor ama `cert` onu kendiliginden
+    # bulamiyor: sertifika URETILIYOR, sonra "Could not find the newly
+    # generated certificate installed" ile dusuyor. Yani sorun Apple
+    # tarafinda degil, kosucunun anahtarlik arama listesinde.
+    # `setup_ci`nin kurdugu anahtarligin adi MATCH_KEYCHAIN_NAME'de
+    # duruyor; acikca gosteriyoruz.
+    kc = ENV["MATCH_KEYCHAIN_NAME"] || "fastlane_tmp_keychain"
+    kc_yol = File.expand_path("~/Library/Keychains/#{kc}-db")
+    kc_yol = File.expand_path("~/Library/Keychains/#{kc}") unless File.exist?(kc_yol)
+    UI.message("anahtarlik: #{kc_yol}")
+
+    # SERTIFIKA HER KOSUDA URETILMIYOR.
+    #
+    # `cert` kosucuda ozel anahtar bulamadigi icin her kosuda YENI bir
+    # dagitim sertifikasi uretiyor. Apple'in siniri TUR BASINA IKI ve
+    # Arcera'da altinci kosuda doldu:
+    #
+    #   Could not create another Distribution certificate, reached the
+    #   maximum number of available Distribution certificates.
+    #
+    # Uretilen sertifikalarin ozel anahtarlari kosucunun gecici
+    # anahtarligiyla birlikte siliniyor, yani hepsi olu doguyor: Apple
+    # tarafinda yuva tutuyorlar, imzalamak icin kullanilamiyorlar.
+    #
+    # Dogrusu sertifikayi BIR KEZ uretip ozel anahtariyla tasimak.
+    # IOS_CERT_P12 (base64 .p12) ve IOS_CERT_PASSWORD varsa o kuruluyor.
+    # Sertifika HESAP GENELINDE: butun oyunlar ayni sertifikayi
+    # kullaniyor, her oyun icin yeni yuva yakmiyoruz.
+    if (ENV["IOS_CERT_P12"] || "") != ""
+      p12 = File.join(Dir.tmpdir, "mirera-dist.p12")
+      File.binwrite(p12, Base64.decode64(ENV["IOS_CERT_P12"]))
+      import_certificate(
+        certificate_path: p12,
+        certificate_password: ENV["IOS_CERT_PASSWORD"] || "",
+        keychain_path: kc_yol,
+        keychain_password: ENV["MATCH_KEYCHAIN_PASSWORD"] || "",
+      )
+      File.delete(p12)
+
+      #
+      # ICE AKTARMA SESSIZCE BASARISIZ OLABILIYOR -- DENETLENIYOR.
+      #
+      # `import_certificate` basarisiz bir `security import`ta bile HATA
+      # VERMIYOR: su satiri basip yoluna devam ediyor ve adim yesil
+      # goruunuyor --
+      #
+      #   security: SecKeychainItemImport: MAC verification failed
+      #   during PKCS12 import (wrong password?)
+      #
+      # Sonra `sigh` "There are no local code signing identities found"
+      # diyor ve sebebi SOYLEMIYOR. Yani belirti ile sebep iki adim
+      # uzakta ve arada yesil bir adim var. Bir derleme tam olarak boyle
+      # kaybedildi.
+      #
+      # (O hatanin kendi sebebi ayri: OpenSSL 3 .p12'yi SHA-256 MAC ile
+      # imzaliyor, macOS yalnizca SHA-1 anliyor. `ios_sertifika.sh`
+      # artik `-macalg SHA1 -keypbe/-certpbe PBE-SHA1-3DES` kullaniyor.)
+      kimlikler = sh("security find-identity -v -p codesigning " \
+        "#{kc_yol.shellescape} || true", log: false)
+      unless kimlikler.include?("Apple Distribution")
+        UI.user_error!("Sertifika ice aktarilmadi: anahtarlikta imza " \
+          "kimligi yok.\n#{kimlikler}")
+      end
+      UI.success("dagitim sertifikasi kuruldu ve anahtarlikta dogrulandi")
+    else
+      UI.important("IOS_CERT_P12 yok -- `cert` yeni sertifika denemek zorunda kalacak.")
+      cert(
+        api_key: anahtar,
+        development: false,
+        keychain_path: kc_yol,
+        keychain_password: ENV["MATCH_KEYCHAIN_PASSWORD"] || "",
+      )
+    end
+
+    # App Store profili (sigh'in varsayilani zaten app-store).
+    sigh(api_key: anahtar, app_identifier: APP, force: true)
+    profil = lane_context[SharedValues::SIGH_NAME]
+    UI.message("profil: #{profil}")
+
+    build_app(
+      project: PROJE,
+      scheme: SEMA,
+      configuration: "Release",
+      export_method: "app-store",
+      output_directory: "build/ipa",
+      clean: false,
+      # Godot'nun urettigi proje OTOMATIK imzaya ayarli; burada elle
+      # MANUEL'e ceviriyoruz, yoksa yukaridaki profil kullanilmiyor.
+      xcargs: [
+        "CODE_SIGN_STYLE=Manual",
+        "DEVELOPMENT_TEAM=#{TAKIM}",
+        "PROVISIONING_PROFILE_SPECIFIER='#{profil}'",
+        "CODE_SIGN_IDENTITY='Apple Distribution'",
+      ].join(" "),
+      export_options: {
+        signingStyle: "manual",
+        teamID: TAKIM,
+        provisioningProfiles: { APP => profil },
+      },
+    )
+
+    upload_to_testflight(
+      api_key: anahtar,
+      # Isleme dakikalar suruyor ve kosucuyu bosuna bekletmenin anlami
+      # yok; sonucu App Store Connect'te gorunuyor.
+      skip_waiting_for_build_processing: true,
+    )
+  end
+end

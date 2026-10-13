@@ -23,6 +23,22 @@ const TEST_REWARDED := "ca-app-pub-3940256099942544/5224354917"
 const LIVE_INTERSTITIAL := "ca-app-pub-6484682017091395/9209801793"
 const LIVE_REWARDED := "ca-app-pub-6484682017091395/3901634794"
 
+##
+## iOS AYRI BIR UYGULAMA ve ayri birimler.
+##
+## AdMob'da uygulama PLATFORM BASINA aciliyor: Mirera'nin Android kaydi
+## ve iOS kaydi birbirinden bagimsiz iki uygulama, iki ayri kimlik.
+## Android birimlerini iOS'te kullanmak istekleri YANLIS uygulamaya
+## yazar; AdMob bunu hata saymaz, yalnizca raporlar karisir.
+##
+## 2026-10-13'te acildi (iOS uygulamasi ...~7013735481). Magaza
+## baglantisi HENUZ YOK, yani sunum ilk yayina kadar SINIRLI kalacak.
+## Yayindan sonra AdMob > uygulama ayarlari > magazaya ekle adimi
+## yapilacak ve TAM MAGAZA URL'siyle aranacak; paket adiyla arama
+## bulmuyor.
+const LIVE_INTERSTITIAL_IOS := "ca-app-pub-6484682017091395/8412693043"
+const LIVE_REWARDED_IOS := "ca-app-pub-6484682017091395/1564388673"
+
 const SHOW_TIMEOUT := 90.0
 const RELOAD_DELAY := 3.0
 
@@ -47,8 +63,30 @@ const INIT_TIMEOUT := 10.0
 ## cikar, gelir sifir olur ama hesap risk almaz ve ilk raporda fark edilir.
 var _live := (OS.has_feature("liveads") and not OS.is_debug_build()
 	and canli_birimler_hazir())
-var interstitial_id := LIVE_INTERSTITIAL if _live else TEST_INTERSTITIAL
-var rewarded_id := LIVE_REWARDED if _live else TEST_REWARDED
+var interstitial_id := canli_inter() if _live else TEST_INTERSTITIAL
+var rewarded_id := canli_rew() if _live else TEST_REWARDED
+
+
+## Platforma gore canli birim. Tek yerde secilmesi onemli: iki ayri
+## kosul yazilirsa biri gun gelir guncellenmeden kalir.
+static func _apple() -> bool:
+	return OS.get_name() == "iOS"
+
+
+static func canli_inter() -> String:
+	return LIVE_INTERSTITIAL_IOS if _apple() else LIVE_INTERSTITIAL
+
+
+static func canli_rew() -> String:
+	return LIVE_REWARDED_IOS if _apple() else LIVE_REWARDED
+
+
+## Uygulama kimliginin BULUNDUGU ayar da platforma bagli. Eklenti
+## ikisini ayri tutuyor ve iOS'inki kurulmazsa Google'in TEST kimligini
+## koyuyor.
+static func app_id_ayari() -> String:
+	return "admob/general/ios/app_id" if _apple() \
+		else "admob/general/android/app_id"
 
 var _interstitial: InterstitialAd = null
 var _rewarded: RewardedAd = null
@@ -79,8 +117,8 @@ var _preloaded := false
 const TEST_APP_ID := "ca-app-pub-3940256099942544~3347511713"
 
 static func canli_birimler_hazir() -> bool:
-	var app_id := str(ProjectSettings.get_setting("admob/general/android/app_id", ""))
-	return (LIVE_INTERSTITIAL != "" and LIVE_REWARDED != ""
+	var app_id := str(ProjectSettings.get_setting(app_id_ayari(), ""))
+	return (canli_inter() != "" and canli_rew() != ""
 		and app_id != "" and app_id != TEST_APP_ID)
 
 
@@ -233,6 +271,24 @@ func preload_all() -> void:
 	_load_rewarded()
 
 
+##
+## iOS ISTEKLERINDE KISISELLESTIRME KAPALI.
+##
+## Eklenti ATT (izleme izni) istemini hic sunmuyor -- yalnizca
+## AppTrackingTransparency.framework bagli, cagri arayuzu yok. ATT onayi
+## olmadan iOS zaten IDFA erisimini kesiyor; `npa=1` ile bunu Google'a
+## acikca soyluyoruz. App Store gizlilik etiketinde bu yuzden izleme YOK
+## yazili -- etiket ile kodun ayni seyi soylemesi sart, aksi Guideline
+## 5.1.2'den ret sebebi.
+##
+## Android'de degisiklik yok: riza akisini UMP yonetiyor.
+func _istek() -> AdRequest:
+	var r := AdRequest.new()
+	if _apple():
+		r.extras["npa"] = "1"
+	return r
+
+
 func _load_interstitial() -> void:
 	if _inter_loader == null or interstitial_id == "":
 		return
@@ -246,7 +302,7 @@ func _load_interstitial() -> void:
 		basarisiz += 1
 		state_changed.emit()
 		_retry(_load_interstitial, "gecis", error.message)
-	_inter_loader.load(interstitial_id, AdRequest.new(), cb)
+	_inter_loader.load(interstitial_id, _istek(), cb)
 
 
 func _load_rewarded() -> void:
@@ -263,7 +319,7 @@ func _load_rewarded() -> void:
 		basarisiz += 1
 		state_changed.emit()
 		_retry(_load_rewarded, "odullu", error.message)
-	_rew_loader.load(rewarded_id, AdRequest.new(), cb)
+	_rew_loader.load(rewarded_id, _istek(), cb)
 
 
 ## Doluluk yoksa hemen tekrar denemek istegi bosa harcar ve pil yakar;
