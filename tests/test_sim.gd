@@ -31,6 +31,7 @@ func _initialize() -> void:
 	t_urun_karsiligi()
 	t_export_safety()
 	t_kurulum()
+	t_ios_kurulum()
 	print("\n%d kontrol, %d hata" % [checks, failed])
 	quit(1 if failed > 0 else 0)
 
@@ -516,6 +517,127 @@ func t_kurulum() -> void:
 			"android/.gdignore var")
 	else:
 		print("  NOT: android/ yok -- derleme sablonu henuz kurulmamis")
+
+
+##
+## App Store tarafinin SESSIZ hatalari.
+##
+## Hepsinin ortak ozelligi su: derleme geciyor, oyun calisiyor, magaza
+## sayfasi dolu goruunuyor ve yanlis olan sey yalnizca gelir raporunda
+## ya da Apple'in ret mektubunda ortaya cikiyor -- yani haftalar sonra.
+##
+func t_ios_kurulum() -> void:
+	print("- iOS kurulum denetimi")
+
+	var ep := FileAccess.get_file_as_string("res://export_presets.cfg")
+	var ios := _on_ayar(ep, "iOS")
+	check(ios != "", "iOS on ayari bulundu")
+	if ios == "":
+		return
+
+	# 1) CANLI REKLAM ETIKETI. Etiket yoksa `_live` false kaliyor ve
+	# magazadaki derleme Google'in TEST birimlerini yukluyor: reklam
+	# gorunur, oyun calisir, kazanc sifirdir. Mirera 1.0.1 boyle cikti.
+	check(ios.contains('custom_features="liveads"'),
+		"iOS on ayarinda liveads etiketi var")
+
+	# 2) MAGAZA GORSELLERI VE ARACLAR PAKETE GIRMEMELI.
+	# `export_filter=all_resources` her seyi aliyor; Arcera'da magaza
+	# goruntuleri boylece 13 MB olu agirlik olarak .pck icine girdi.
+	for d in ["store/*", "tools/*", "tests/*", "brand/*"]:
+		check(ios.contains(d), "iOS disa aktariminda %s haric" % d)
+
+	# 3) iOS AdMob UYGULAMA KIMLIGI. Android'inkinden AYRI bir ayar; bos
+	# birakilirsa eklenti Info.plist'e Google'in TEST kimligini yaziyor.
+	var pg := FileAccess.get_file_as_string("res://project.godot")
+	check(pg.contains("general/ios/app_id="),
+		"project.godot'ta iOS AdMob uygulama kimligi var")
+	check(not pg.contains("ca-app-pub-3940256099942544~"),
+		"project.godot'ta Google'in TEST uygulama kimligi yok")
+
+	# 4) iOS BIRIMLERI ANDROID'INKINDEN FARKLI OLMALI. AdMob'da uygulama
+	# PLATFORM BASINA aciliyor; Android birimini iOS'te kullanmak
+	# istekleri yanlis uygulamaya yaziyor.
+	check(AdMobAdProvider.LIVE_INTERSTITIAL_IOS != "", "iOS gecis birimi dolu")
+	check(AdMobAdProvider.LIVE_REWARDED_IOS != "", "iOS odullu birimi dolu")
+	check(AdMobAdProvider.LIVE_INTERSTITIAL_IOS != AdMobAdProvider.LIVE_INTERSTITIAL,
+		"iOS gecis birimi Android'inkinden farkli")
+	check(AdMobAdProvider.LIVE_REWARDED_IOS != AdMobAdProvider.LIVE_REWARDED,
+		"iOS odullu birimi Android'inkinden farkli")
+
+	# 5) KISISELLESTIRME KAPALI. App Store gizlilik etiketinde "izleme
+	# yok" yaziyor ve bunun kodda karsiligi olmali: eklenti ATT istemini
+	# sunmadigi icin npa=1 gonderiyoruz. Etiketle kodun ayrilmasi
+	# Guideline 5.1.2'den ret sebebi.
+	var kod := _kodu_oku("res://scripts/ads/admob_ad_provider.gd")
+	check(kod.contains('r.extras["npa"] = "1"'), "iOS isteklerinde npa=1")
+	check(not kod.contains("AdRequest.new(), cb"),
+		"yukleyiciler ciplak AdRequest degil _istek() kullaniyor")
+
+	# 6) APP STORE IKONU. Yol on ayardan OKUNUYOR, teste sabit
+	# yazilmiyor: asil risk alanin var olmayan bir dosyayi gostermesi.
+	# ALFA KANALI OLMAMALI -- Apple alfali ikonu "Invalid large app
+	# icon" ile reddediyor ve bu, derlemenin SONUNDA ortaya cikiyor.
+	var re := RegEx.create_from_string(r'icons/app_store_1024x1024="(res://[^"]+)"')
+	var m := re.search(ios)
+	check(m != null, "on ayarda App Store ikonu tanimli")
+	if m != null:
+		var yol := m.get_string(1)
+		check(FileAccess.file_exists(yol), "App Store ikonu var: %s" % yol)
+		if FileAccess.file_exists(yol):
+			var ikon := Image.load_from_file(yol)
+			check(ikon != null and ikon.get_width() == 1024 and ikon.get_height() == 1024,
+				"App Store ikonu 1024x1024")
+			check(ikon != null and ikon.detect_alpha() == Image.ALPHA_NONE,
+				"App Store ikonunda alfa kanali yok")
+
+	# 7) MAGAZA METINLERI. appstore.json ile copy.json AYNI dilleri
+	# tasimali: birinde olup otekinde olmayan bir dil, o dilde yarim
+	# kalmis bir urun sayfasi demek.
+	var ek: Dictionary = JSON.parse_string(
+		FileAccess.get_file_as_string("res://store/appstore.json"))
+	var cp: Dictionary = JSON.parse_string(
+		FileAccess.get_file_as_string("res://store/copy.json"))
+	check(ek != null and not ek.is_empty(), "store/appstore.json okunabiliyor")
+	if ek == null or ek.is_empty() or cp == null:
+		return
+	var ad: Array = (ek.get("diller", {}) as Dictionary).keys()
+	var cd: Array = cp.keys()
+	ad.sort()
+	cd.sort()
+	check(ad == cd, "appstore.json ve copy.json ayni dilleri tasiyor")
+
+	for dil in ad:
+		var d: Dictionary = ek.diller[dil]
+		for alan in ["apple", "altbaslik", "anahtar", "tanitim"]:
+			check(d.has(alan) and str(d[alan]) != "",
+				"%s dilinde %s dolu" % [dil, alan])
+
+	# 8) BAGLANTILAR. Destek adresi App Store'da ZORUNLU ve calismayan
+	# bir adres Kural 1.5'ten dogrudan ret sebebi -- Arcera'da tam olarak
+	# bu oldu: adres on uc dilde bildirildi, sayfa hic yayimlanmamisti.
+	var bag: Dictionary = ek.get("baglantilar", {})
+	for alan in ["gizlilik", "destek", "pazarlama"]:
+		check(bag.has(alan) and str(bag[alan]).begins_with("https://"),
+			"baglantilar.%s https adresi" % alan)
+
+
+##
+## `export_presets.cfg` icinden bir on ayarin metnini kesip verir.
+##
+## Bir on ayar DOSYADA IKI BOLUM: `[preset.N]` ve `[preset.N.options]`.
+## Yalnizca ilkini almak `custom_features`i verir ama ikon yolunu
+## vermez; ikisi birlikte doneuyor.
+func _on_ayar(ham: String, ad: String) -> String:
+	var re := RegEx.create_from_string(r"\[preset\.(\d+)\]")
+	for m in re.search_all(ham):
+		var no := m.get_string(1)
+		var bas := m.get_start()
+		var sonraki := ham.find("[preset.%d]" % (int(no) + 1), bas)
+		var blok := ham.substr(bas) if sonraki < 0 else ham.substr(bas, sonraki - bas)
+		if blok.contains('name="%s"' % ad):
+			return blok
+	return ""
 
 
 ## Kaynak dosyayi YORUM SATIRLARI ATILMIS halde okur.
