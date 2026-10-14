@@ -76,10 +76,29 @@ Thank you for the review. Please find the requested information below. The
 same text has also been added to the Notes field in App Review Information.
 
 1. SCREEN RECORDING
-Attached. It was captured on a physical iPhone running the latest iOS and
-begins with launching the app from the Home Screen. The app has no account
-registration, login or deletion flow, no user-generated content and no paid
-content, so none of those flows appear in the recording.
+We have not attached a recording, and we would like to explain why we believe
+one adds nothing for this particular app.
+
+The recording is asked to show account registration, login and deletion
+flows, user-generated content with its reporting and blocking mechanisms, and
+access to paid content. This app contains none of them:
+
+- No account, no login, no registration. The app opens straight into the
+  first level. There is nothing to sign in to, so there is also no account
+  deletion flow to demonstrate.
+- No user-generated content, no chat, no social feature of any kind.
+- No in-app purchases on iOS. The purchase layer in the codebase is Google
+  Play Billing only and is disabled on this platform, so no purchase or
+  restore control appears anywhere in the app.
+- No server of our own. The app is fully playable offline, including in
+  airplane mode.
+
+The typical user flow is therefore: launch the app, the first level starts,
+play. Every feature is reachable immediately, with no gate, code or
+configuration. The build is on TestFlight and can be opened directly.
+
+If a recording is still required after reading the information below, please
+tell us and we will arrange a capture on a physical device.
 
 2. PURPOSE AND TARGET AUDIENCE
 Mirera is a light-routing puzzle. A beam leaves the source and travels in a
