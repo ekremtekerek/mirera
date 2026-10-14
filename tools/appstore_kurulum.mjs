@@ -15,7 +15,11 @@
 //                       does not exist" veriyor)
 //
 import fs from "node:fs";
+import path from "node:path";
 import { api, UYGULAMA, SURUM, ANAHTAR_DIZIN } from "./asc_api.mjs";
+
+const KOK = path.resolve(path.dirname(new URL(import.meta.url).pathname
+  .replace(/^\/([A-Za-z]:)/, "$1")), "..");
 
 //
 // INCELEME ILETISIM BILGILERI DEPONUN DISINDA.
@@ -160,12 +164,33 @@ if (!fs.existsSync(ILETISIM_YOL)) {
   });
   console.log(`telif hakki: ${yil} ${kisi.ad} ${kisi.soyad}`);
 
+  //
+  // INCELEME NOTLARI.
+  //
+  // Apple'in "Guideline 2.1 - Information Needed" mektubu bunu ACIKCA
+  // istiyor: "add this information to the Notes field of the App Review
+  // Information section ... for reference on future submissions". Yani
+  // yalnizca Resolution Center'a cevap yazmak yetmiyor, ayni bilgi
+  // burada da durmali -- sonraki surumlerde yeniden sorulmasin diye.
+  //
+  // Metin depoda `store/apple-review-notes.txt` icinde; sinir 4000
+  // karakter ve asilirsa Apple kaydi reddediyor.
+  const NOT_YOL = path.join(KOK, "store/apple-review-notes.txt");
+  let notlar = null;
+  if (fs.existsSync(NOT_YOL)) {
+    notlar = fs.readFileSync(NOT_YOL, "utf8").trim();
+    if ([...notlar].length > 4000) {
+      throw new Error(`inceleme notlari ${[...notlar].length} karakter, sinir 4000`);
+    }
+  }
+
   const nitelik = {
     contactFirstName: kisi.ad,
     contactLastName: kisi.soyad,
     contactPhone: kisi.telefon,
     contactEmail: kisi.eposta,
     demoAccountRequired: false,
+    ...(notlar ? { notes: notlar } : {}),
   };
   const var_ = await api("GET", `v1/appStoreVersions/${sv.id}/appStoreReviewDetail`);
   if (var_?.data?.id) {

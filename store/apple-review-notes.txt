@@ -1,0 +1,47 @@
+PURPOSE AND TARGET AUDIENCE
+Mirera is a light-routing puzzle. A beam leaves the source and travels in a
+straight line; tapping a mirror turns it ninety degrees. The player bends the
+beam until it reaches the target. The audience is casual puzzle players of any
+age who want a calm game with no timers, no lives and no pressure. Two things
+define it: nothing is hidden -- the beam is redrawn the instant a mirror is
+touched, so the player always sees exactly what the move did -- and every
+level is built backwards from its own solution, so an unsolvable board cannot
+exist. Three stars means the player used the fewest possible taps, a number
+the game computes before the level starts.
+
+HOW TO SET UP AND ACCESS EVERY FEATURE
+There is nothing to set up. Launch the app and the first level starts. There
+is no account, no login, no registration and no configuration screen, so no
+credentials are needed to review the app. Levels are generated and verified on
+the device and never run out; the entire app works offline, including in
+airplane mode. Later elements (walls that block the beam, spare mirrors that
+must be ruled out) appear automatically as the player progresses; no unlock,
+purchase or code is required. Themes unlock by collecting stars and change
+colours only -- the puzzles are identical in every theme.
+
+EXTERNAL SERVICES, TOOLS AND PLATFORMS
+Google AdMob (Google Mobile Ads SDK) for advertising is the ONLY external
+service the app contacts. There is no backend of our own, no authentication
+service, no payment processor, no AI service and no third-party analytics
+SDK. The app is built with Godot Engine 4.7.
+
+IN-APP PURCHASES AND ACCOUNTS
+There are no in-app purchases on iOS. The purchase layer in the codebase is
+Google Play Billing only and is disabled on this platform, so no purchase or
+restore controls are shown. There is no account creation, therefore no
+account deletion flow is required. There is no user-generated content, no
+chat and no social feature, therefore no content reporting or blocking
+mechanism is required. Age rating is 4+.
+
+REGIONAL DIFFERENCES
+None. The app behaves identically in every region. It is localized into 13
+languages (text only; the puzzles, rules and content are the same
+everywhere). Advertising is non-personalised in all regions: the app does not
+present an App Tracking Transparency prompt and requests non-personalised ads
+only, which is why the App Privacy labels declare no tracking.
+
+REGULATED INDUSTRY OR PROTECTED THIRD-PARTY MATERIAL
+Not applicable. The app is a self-contained puzzle game in no regulated
+industry. All artwork, audio, level data and source code are original work by
+the developer; the app uses no third-party content, which matches the content
+rights declaration on this listing.
